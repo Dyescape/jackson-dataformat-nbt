@@ -25,7 +25,7 @@ public class Example {
 
 ### Kotlin
 
-```kt
+```kotlin
 // creating the mapper
 val mapper = NBTMapper()
 mapper.registerKotlinModule()
@@ -45,3 +45,67 @@ val value = mapper.readValue<MyType>(bytes)
 
 You can find the latest version and the corresponding dependency
 snippets [here](https://search.maven.org/artifact/com.dyescape/jackson-dataformat-nbt).
+
+## Big Test
+
+Something that must not be absent from any decent NBT library, the ["bigtest"](https://wiki.vg/NBT#bigtest.nbt).
+
+This is a mapping that can serialize and deserialize the "bigtest" file:
+
+```kotlin
+class BigTest(
+    val shortTest: Short,
+    val longTest: Long,
+    val byteTest: Byte,
+    @JsonProperty("byteArrayTest (the first 1000 values of (n*n*255+n*7)%100, starting with n=0 (0, 62, 34, 16, 8, ...))")
+    val byteArrayTest: ByteArray,
+    @JsonProperty("listTest (long)")
+    val longListTest: List<Long>,
+    val floatTest: Float,
+    val doubleTest: Double,
+    val intTest: Int,
+    @JsonProperty("listTest (compound)")
+    val compoundListTest: List<CompoundListTest>,
+    @JsonProperty("nested compound test")
+    val nestedCompounds: Map<String, NestedCompound>,
+    val stringTest: String,
+) {
+    class CompoundListTest(
+        @JsonProperty("created-on")
+        val createdOn: Long,
+        val name: String,
+    )
+
+    class NestedCompound(
+        val name: String,
+        val value: Float,
+    )
+}
+```
+
+And this is how you can create the exact value:
+
+```kotlin
+BigTest(
+    32767,
+    9223372036854775807,
+    127,
+    ByteArray(1000) { ((it * it * 255 + it * 7) % 100).toByte() },
+    listOf(11L, 12L, 13L, 14L, 15L),
+    0.49823147f,
+    0.4931287132182315,
+    2147483647,
+    listOf(
+        BigTest.CompoundListTest(1264099775885, "Compound tag #0"),
+        BigTest.CompoundListTest(1264099775885, "Compound tag #1"),
+    ),
+    buildMap {
+        put("egg", BigTest.NestedCompound("Eggbert", 0.5f))
+        put("ham", BigTest.NestedCompound("Hampus", 0.75f))
+    },
+    "HELLO WORLD THIS IS A TEST STRING ÅÄÖ!",
+)
+```
+
+> **Note:** The root tag of the original "bigtest" file is named `Level`. Parsing this is should work, however the
+> generator will write the root tag name as an empty string, as that is how minecraft also behaves.
