@@ -113,6 +113,8 @@ abstract class NBTReader(
 
     fun numberType(): NumberType {
         return when (readValue) {
+            is Byte   -> NumberType.INT
+            is Short  -> NumberType.INT
             is Int    -> NumberType.INT
             is Long   -> NumberType.LONG
             is Float  -> NumberType.FLOAT
