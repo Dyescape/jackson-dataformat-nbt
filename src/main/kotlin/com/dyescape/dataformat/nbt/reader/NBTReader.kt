@@ -1,10 +1,12 @@
 package com.dyescape.dataformat.nbt.reader
 
+import com.dyescape.dataformat.nbt.NBTFeature
 import com.dyescape.dataformat.nbt.tag.NBTTagType
 import com.fasterxml.jackson.core.JsonParser.NumberType
 import com.fasterxml.jackson.core.JsonStreamContext
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.core.json.DupDetector
+import com.fasterxml.jackson.core.util.JacksonFeatureSet
 import java.io.DataInputStream
 import java.io.InputStream
 
@@ -126,8 +128,16 @@ abstract class NBTReader(
     abstract fun allowEndOfContent(): Boolean
 
     companion object {
-        fun root(input: InputStream, duplicateDetector: DupDetector?): NBTReader {
-            return RootCompoundNBTReader(DataInputStream(input), duplicateDetector)
+        fun root(
+            features: JacksonFeatureSet<NBTFeature>,
+            input: InputStream,
+            duplicateDetector: DupDetector?,
+        ): NBTReader {
+            return RootCompoundNBTReader(
+                features.isEnabled(NBTFeature.INCLUDE_ROOT_TAG_NAME),
+                DataInputStream(input),
+                duplicateDetector,
+            )
         }
     }
 }

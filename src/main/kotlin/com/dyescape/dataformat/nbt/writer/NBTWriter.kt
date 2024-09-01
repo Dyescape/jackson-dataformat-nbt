@@ -1,8 +1,10 @@
 package com.dyescape.dataformat.nbt.writer
 
-import com.dyescape.dataformat.nbt.tag.NBTValue
+import com.dyescape.dataformat.nbt.NBTFeature
 import com.dyescape.dataformat.nbt.tag.NBTTagType
+import com.dyescape.dataformat.nbt.tag.NBTValue
 import com.fasterxml.jackson.core.json.DupDetector
+import com.fasterxml.jackson.core.util.JacksonFeatureSet
 import java.io.DataOutputStream
 import java.io.OutputStream
 
@@ -41,8 +43,16 @@ abstract class NBTWriter(
     }
 
     companion object {
-        fun root(output: OutputStream, duplicateDetector: DupDetector?): NBTWriter {
-            return RootCompoundNBTWriter(DataOutputStream(output), duplicateDetector)
+        fun root(
+            feature: JacksonFeatureSet<NBTFeature>,
+            output: OutputStream,
+            duplicateDetector: DupDetector?,
+        ): NBTWriter {
+            return RootCompoundNBTWriter(
+                feature.isEnabled(NBTFeature.INCLUDE_ROOT_TAG_NAME),
+                DataOutputStream(output),
+                duplicateDetector,
+            )
         }
     }
 }

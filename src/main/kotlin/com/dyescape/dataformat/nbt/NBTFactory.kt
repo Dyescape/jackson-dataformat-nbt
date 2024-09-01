@@ -4,25 +4,48 @@ import com.dyescape.dataformat.nbt.tag.NBTTagType
 import com.fasterxml.jackson.core.JsonEncoding
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.ObjectCodec
-import com.fasterxml.jackson.core.TSFBuilder
 import com.fasterxml.jackson.core.format.InputAccessor
 import com.fasterxml.jackson.core.format.MatchStrength
 import com.fasterxml.jackson.core.io.IOContext
+import com.fasterxml.jackson.core.util.JacksonFeatureSet
 import java.io.*
 import java.net.URL
 
+class NBTFactory : JsonFactory, NBTFeature.Configurator<NBTFactory> {
+    internal var nbtFeatures: JacksonFeatureSet<NBTFeature>
+        private set
 
-class NBTFactory : JsonFactory {
-    constructor() : super()
+    constructor() : super() {
+        nbtFeatures = NBTFeature.DEFAULTS
+    }
 
-    constructor(codec: ObjectCodec?) : super(codec)
+    constructor(codec: ObjectCodec?) : super(codec) {
+        nbtFeatures = NBTFeature.DEFAULTS
+    }
 
-    constructor(source: NBTFactory, codec: ObjectCodec?) : super(source, codec)
+    constructor(source: NBTFactory, codec: ObjectCodec?) : super(source, codec) {
+        nbtFeatures = source.nbtFeatures
+    }
 
-    constructor(builder: NBTFactoryBuilder) : super(builder, false)
+    constructor(builder: NBTFactoryBuilder) : super(builder, false) {
+        nbtFeatures = builder.nbtFeatures
+    }
 
-    override fun rebuild(): TSFBuilder<*, *> {
+    override fun rebuild(): NBTFactoryBuilder {
         return NBTFactoryBuilder(this)
+    }
+
+    override fun configure(feature: NBTFeature, state: Boolean): NBTFactory {
+        nbtFeatures = when (state) {
+            true  -> nbtFeatures.with(feature)
+            false -> nbtFeatures.without(feature)
+        }
+
+        return this
+    }
+
+    override fun isEnabled(feature: NBTFeature): Boolean {
+        return nbtFeatures.isEnabled(feature)
     }
 
     override fun copy(): NBTFactory {
@@ -81,18 +104,17 @@ class NBTFactory : JsonFactory {
 
     override fun createGenerator(out: OutputStream): NBTGenerator {
         val ctxt = _createContext(_createContentReference(out), false)
-        return createNBTGenerator(_generatorFeatures, _objectCodec, _decorate(out, ctxt))
+        return createNBTGenerator(_generatorFeatures, _objectCodec, _decorate(out, ctxt), ctxt)
     }
 
     override fun _createParser(inputStream: InputStream, ctxt: IOContext): NBTParser {
-        return NBTParser(ctxt, _parserFeatures, inputStream, _objectCodec)
+        return NBTParser(nbtFeatures, ctxt, _parserFeatures, inputStream, _objectCodec)
     }
-
 
     override fun _createParser(data: ByteArray, offset: Int, len: Int, ctxt: IOContext): NBTParser {
         val inputStream = ByteArrayInputStream(data, offset, len)
 
-        return NBTParser(ctxt, _parserFeatures, inputStream, _objectCodec)
+        return NBTParser(nbtFeatures, ctxt, _parserFeatures, inputStream, _objectCodec)
     }
 
     override fun _createGenerator(out: Writer?, ctxt: IOContext): NBTGenerator {
@@ -100,15 +122,20 @@ class NBTFactory : JsonFactory {
     }
 
     override fun _createUTF8Generator(out: OutputStream, ctxt: IOContext): NBTGenerator {
-        return createNBTGenerator(_generatorFeatures, _objectCodec, out)
+        return createNBTGenerator(_generatorFeatures, _objectCodec, out, ctxt)
     }
 
     override fun _createWriter(out: OutputStream?, enc: JsonEncoding?, ctxt: IOContext?): Writer? {
         nonByteTarget()
     }
 
-    private fun createNBTGenerator(features: Int, codec: ObjectCodec, out: OutputStream): NBTGenerator {
-        return NBTGenerator(features, codec, out)
+    private fun createNBTGenerator(
+        features: Int,
+        codec: ObjectCodec,
+        out: OutputStream,
+        ioContext: IOContext?,
+    ): NBTGenerator {
+        return NBTGenerator(nbtFeatures, features, codec, out, ioContext)
     }
 
     private fun nonByteTarget(): Nothing {
@@ -135,39 +162,42 @@ class NBTFactory : JsonFactory {
             return MatchStrength.NO_MATCH
         }
 
-        if (!acc.hasMoreBytes()) {
-            // Compound tag type needs to be followed by a short for the string length
-            return MatchStrength.NO_MATCH
-        }
-
-        val mostSignificant = acc.nextByte()
-
-        if (!acc.hasMoreBytes()) {
-            // Short needs to have two bytes
-            return MatchStrength.NO_MATCH
-        }
-
-        val leastSignificant = acc.nextByte()
-
-        val potentialStringLength = (mostSignificant.toInt() shl 8 or leastSignificant.toInt()).toShort()
         var improperUse = false
 
-        if (potentialStringLength > 0) {
-            // Normally, the root compound name should just have 0 length. This could however still be improper use of
-            // NBT.
-
-            // Try to skip the string
-            repeat(potentialStringLength.toInt()) {
-                if (!acc.hasMoreBytes()) {
-                    // The potential string length is greater than the number of bytes, so it cannot be a valid string
-                    // length
-                    return MatchStrength.NO_MATCH
-                }
-
-                acc.nextByte()
+        if (isEnabled(NBTFeature.INCLUDE_ROOT_TAG_NAME)) {
+            if (!acc.hasMoreBytes()) {
+                // Compound tag type needs to be followed by a short for the string length
+                return MatchStrength.NO_MATCH
             }
 
-            improperUse = true
+            val mostSignificant = acc.nextByte()
+
+            if (!acc.hasMoreBytes()) {
+                // Short needs to have two bytes
+                return MatchStrength.NO_MATCH
+            }
+
+            val leastSignificant = acc.nextByte()
+
+            val potentialStringLength = (mostSignificant.toInt() shl 8 or leastSignificant.toInt()).toShort()
+
+            if (potentialStringLength > 0) {
+                // Normally, the root compound name should just have length 0.
+                // This could, however, still be improper use of NBT.
+
+                // Try to skip the string
+                repeat(potentialStringLength.toInt()) {
+                    if (!acc.hasMoreBytes()) {
+                        // The potential string length is greater than the number of bytes, so it cannot be a valid string
+                        // length
+                        return MatchStrength.NO_MATCH
+                    }
+
+                    acc.nextByte()
+                }
+
+                improperUse = true
+            }
         }
 
         if (!acc.hasMoreBytes()) {

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.json.DupDetector
 import java.io.DataInputStream
 
 class RootCompoundNBTReader(
+    private val includeName: Boolean,
     input: DataInputStream,
     duplicateDetector: DupDetector?,
 ) : CompoundNBTReader(input, null, duplicateDetector, type = TYPE_ROOT) {
@@ -36,7 +37,10 @@ class RootCompoundNBTReader(
                 error("Root tag must be of type compound")
             }
 
-            input.readUTF()
+            if (includeName) {
+                input.readUTF()
+            }
+
             startSkipped = true
             return NBTReadResult(JsonToken.START_OBJECT, this)
         }

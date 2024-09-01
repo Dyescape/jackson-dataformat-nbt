@@ -29,4 +29,14 @@ class GeneratorTest {
 
         assertArrayEquals(expected, result)
     }
+
+    @Test
+    @DisplayName("write simple compound (network)")
+    fun simpleNetwork() {
+        val mapper = createTestMapper().disable(NBTFeature.INCLUDE_ROOT_TAG_NAME)
+        val result = mapper.writeValueAsBytes(simpleFixtureValue)
+        val expected = nbtFixture("simple_network").readAllBytes()
+
+        assertArrayEquals(expected, result)
+    }
 }

@@ -7,20 +7,22 @@ import com.fasterxml.jackson.core.base.ParserMinimalBase
 import com.fasterxml.jackson.core.io.IOContext
 import com.fasterxml.jackson.core.json.DupDetector
 import com.fasterxml.jackson.core.json.PackageVersion
+import com.fasterxml.jackson.core.util.JacksonFeatureSet
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 
 class NBTParser(
+    nbtFeatures: JacksonFeatureSet<NBTFeature>,
     private val context: IOContext,
     features: Int,
     input: InputStream,
     private var objectCodec: ObjectCodec?,
-) : ParserMinimalBase(features) {
+) : ParserMinimalBase(features, context.streamReadConstraints()) {
     private var closed = false
     private val countingInput = CountingInputStream(input)
-    private var reader = NBTReader.root(countingInput, createDuplicateDetector(features))
+    private var reader = NBTReader.root(nbtFeatures, countingInput, createDuplicateDetector(features))
 
     override fun version(): Version {
         return PackageVersion.VERSION
@@ -46,6 +48,7 @@ class NBTParser(
         return reader
     }
 
+    @Deprecated(message = "Deprecated since 2.17", replaceWith = ReplaceWith("currentLocation()"))
     override fun getCurrentLocation(): JsonLocation {
         return JsonLocation(
             context.contentReference(),
@@ -56,6 +59,7 @@ class NBTParser(
         )
     }
 
+    @Deprecated(message = "Deprecated since 2.17", replaceWith = ReplaceWith("currentTokenLocation()"))
     override fun getTokenLocation(): JsonLocation {
         return JsonLocation(
             context.contentReference(),
@@ -82,6 +86,7 @@ class NBTParser(
         reader.currentName = name
     }
 
+    @Deprecated(message = "Deprecated since 2.17", replaceWith = ReplaceWith("currentName()"))
     override fun getCurrentName(): String {
         return reader.currentName
     }

@@ -8,7 +8,7 @@ import kotlin.reflect.KClass
 
 abstract class NBTSerializer<T : Any>(
     type: KClass<T>,
-    protected val primitive: Boolean,
+    primitive: Boolean,
 ) : StdScalarSerializer<T>(type.javaType(primitive))
 
 class NBTByteSerializer(primitive: Boolean) : NBTSerializer<Byte>(Byte::class, primitive) {
@@ -27,18 +27,24 @@ object NBTByteArraySerializer : StdScalarSerializer<ByteArray>(ByteArray::class.
     override fun serialize(value: ByteArray?, generator: JsonGenerator, provider: SerializerProvider) {
         generator.writeEmbeddedObject(value?.let { NBTValue.ByteArrayTag(it) })
     }
+
+    private fun readResolve(): Any = NBTByteArraySerializer
 }
 
 object NBTIntArraySerializer : StdScalarSerializer<IntArray>(IntArray::class.java) {
     override fun serialize(value: IntArray?, generator: JsonGenerator, provider: SerializerProvider) {
         generator.writeEmbeddedObject(value?.let { NBTValue.IntArrayTag(it) })
     }
+
+    private fun readResolve(): Any = NBTIntArraySerializer
 }
 
 object NBTLongArraySerializer : StdScalarSerializer<LongArray>(LongArray::class.java) {
     override fun serialize(value: LongArray?, generator: JsonGenerator, provider: SerializerProvider) {
         generator.writeEmbeddedObject(value?.let { NBTValue.LongArrayTag(it) })
     }
+
+    private fun readResolve(): Any = NBTLongArraySerializer
 }
 
 private fun <T : Any> KClass<T>.javaType(primitive: Boolean): Class<T> {
