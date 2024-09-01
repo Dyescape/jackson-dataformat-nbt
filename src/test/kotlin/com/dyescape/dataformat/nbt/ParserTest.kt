@@ -30,4 +30,15 @@ class ParserTest {
 
         assertEquals(bigTestFixtureValue, result)
     }
+
+    @Test
+    @DisplayName("parse simple compound (network)")
+    fun simpleNetwork() {
+        val input = nbtFixture("simple_network")
+        val mapper = createTestMapper().disable(NBTFeature.INCLUDE_ROOT_TAG_NAME)
+
+        val result = mapper.readValue<Simple>(input)
+
+        assertEquals(simpleFixtureValue, result)
+    }
 }

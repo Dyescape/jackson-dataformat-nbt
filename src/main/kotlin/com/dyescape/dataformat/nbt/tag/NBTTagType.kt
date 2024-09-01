@@ -16,7 +16,7 @@ enum class NBTTagType(val id: Int) {
     LONG_ARRAY(12);
 
     companion object {
-        private val mapping = NBTTagType.values().associateBy { it.id }
+        private val mapping = entries.associateBy { it.id }
 
         fun byId(id: Int) = mapping[id] ?: error("Unknown NBT tag id: $id")
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.json.DupDetector
 import java.io.DataOutputStream
 
 class RootCompoundNBTWriter(
+    private val includeName: Boolean,
     output: DataOutputStream,
     duplicateDetector: DupDetector?,
 ) : CompoundNBTWriter(parent = null, duplicateDetector, output) {
@@ -12,7 +13,9 @@ class RootCompoundNBTWriter(
 
     override fun start() {
         output.writeByte(NBTTagType.COMPOUND.id)
-        output.writeUTF("")
+        if (includeName) {
+            output.writeUTF("")
+        }
         started = true
     }
 

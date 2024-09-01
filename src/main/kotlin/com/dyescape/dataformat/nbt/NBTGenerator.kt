@@ -7,18 +7,22 @@ import com.dyescape.dataformat.nbt.writer.NBTWriter
 import com.fasterxml.jackson.core.Base64Variant
 import com.fasterxml.jackson.core.ObjectCodec
 import com.fasterxml.jackson.core.base.GeneratorBase
+import com.fasterxml.jackson.core.io.IOContext
 import com.fasterxml.jackson.core.json.DupDetector
+import com.fasterxml.jackson.core.util.JacksonFeatureSet
 import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 
 class NBTGenerator(
+    nbtFeatures: JacksonFeatureSet<NBTFeature>,
     features: Int,
     codec: ObjectCodec?,
     out: OutputStream,
-) : GeneratorBase(features, codec) {
+    ioContext: IOContext?,
+) : GeneratorBase(features, codec, ioContext) {
     private var finished = false
-    private var writer = NBTWriter.root(out, createDuplicateDetector(features))
+    private var writer = NBTWriter.root(nbtFeatures, out, createDuplicateDetector(features))
 
     override fun flush() {
         writer.flush()
@@ -32,13 +36,13 @@ class NBTGenerator(
     override fun writeStartArray(forValue: Any?) {
         _verifyValueWrite("start a list tag")
         writer = writer.startList()
-        currentValue = forValue
+        assignCurrentValue(forValue)
     }
 
     override fun writeStartArray(forValue: Any?, size: Int) {
         _verifyValueWrite("start a list tag")
         writer = writer.startList(size = size)
-        currentValue = forValue
+        assignCurrentValue(forValue)
     }
 
     @Deprecated(
